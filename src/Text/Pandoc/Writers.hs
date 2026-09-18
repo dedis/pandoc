@@ -57,6 +57,7 @@ module Text.Pandoc.Writers
     , writeMarkdown
     , writeMarkua
     , writeMediaWiki
+    , writeMinML
     , writeMs
     , writeMuse
     , writeNative
@@ -123,6 +124,7 @@ import Text.Pandoc.Writers.LaTeX
 import Text.Pandoc.Writers.Man
 import Text.Pandoc.Writers.Markdown
 import Text.Pandoc.Writers.MediaWiki
+import Text.Pandoc.Writers.MinML
 import Text.Pandoc.Writers.Ms
 import Text.Pandoc.Writers.Muse
 import Text.Pandoc.Writers.Native
@@ -170,6 +172,7 @@ writers = [
   ,("html"         , TextWriter writeHtml5String)
   ,("html4"        , TextWriter writeHtml4String)
   ,("html5"        , TextWriter writeHtml5String)
+  ,("minml"        , TextWriter writeMinML)
   ,("icml"         , TextWriter writeICML)
   ,("s5"           , TextWriter writeS5)
   ,("slidy"        , TextWriter writeSlidy)
