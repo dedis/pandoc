@@ -19,6 +19,7 @@ import qualified Tests.Readers.DokuWiki
 import qualified Tests.Readers.EPUB
 import qualified Tests.Readers.FB2
 import qualified Tests.Readers.HTML
+import qualified Tests.Readers.MinML
 import qualified Tests.Readers.JATS
 import qualified Tests.Readers.Jira
 import qualified Tests.Readers.LaTeX
@@ -39,6 +40,7 @@ import qualified Tests.Writers.DocBook
 import qualified Tests.Writers.Docx
 import qualified Tests.Writers.FB2
 import qualified Tests.Writers.HTML
+import qualified Tests.Writers.MinML
 import qualified Tests.Writers.JATS
 import qualified Tests.Writers.Jira
 import qualified Tests.Writers.LaTeX
@@ -72,6 +74,7 @@ tests pandocPath = testGroup "pandoc tests"
           , testGroup "ConTeXt" Tests.Writers.ConTeXt.tests
           , testGroup "LaTeX" Tests.Writers.LaTeX.tests
           , testGroup "HTML" Tests.Writers.HTML.tests
+          , testGroup "MinML" Tests.Writers.MinML.tests
           , testGroup "JATS" Tests.Writers.JATS.tests
           , testGroup "Jira" Tests.Writers.Jira.tests
           , testGroup "Docbook" Tests.Writers.DocBook.tests
@@ -95,6 +98,7 @@ tests pandocPath = testGroup "pandoc tests"
           [ testGroup "LaTeX" Tests.Readers.LaTeX.tests
           , testGroup "Markdown" Tests.Readers.Markdown.tests
           , testGroup "HTML" Tests.Readers.HTML.tests
+          , testGroup "MinML" Tests.Readers.MinML.tests
           , testGroup "JATS" Tests.Readers.JATS.tests
           , testGroup "Jira" Tests.Readers.Jira.tests
           , testGroup "Org" Tests.Readers.Org.tests
