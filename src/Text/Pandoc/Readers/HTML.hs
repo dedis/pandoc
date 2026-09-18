@@ -15,6 +15,7 @@
 Conversion of HTML to 'Pandoc' document.
 -}
 module Text.Pandoc.Readers.HTML ( readHtml
+                                , readHtmlTokens
                                 , htmlTag
                                 , htmlInBalanced
                                 , isInlineTag
@@ -88,11 +89,21 @@ readHtmlWithDepth :: (PandocMonad m, ToSources a)
                   -> ReaderOptions
                   -> a
                   -> m Pandoc
-readHtmlWithDepth depth opts inp = do
+readHtmlWithDepth depth opts inp =
   let tags = stripPrefixes $ canonicalizeTags $
              parseTagsOptions parseOptions{ optTagPosition = True }
              (sourcesToText $ toSources inp)
-      parseDoc = do
+  in readHtmlTokensWithDepth depth opts tags
+
+-- | Interpret an already tokenized document with the HTML reader.
+readHtmlTokens :: PandocMonad m => ReaderOptions -> [Tag Text] -> m Pandoc
+readHtmlTokens opts = readHtmlTokensWithDepth 0 opts . stripPrefixes .
+                     canonicalizeTags
+
+readHtmlTokensWithDepth :: PandocMonad m
+                       => Int -> ReaderOptions -> [Tag Text] -> m Pandoc
+readHtmlTokensWithDepth depth opts tags = do
+  let parseDoc = do
         blocks <- fixPlains False . mconcat <$> manyTill block eof
         meta <- stateMeta . parserState <$> getState
         bs' <- replaceNotes (B.toList blocks)

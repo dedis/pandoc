@@ -20,6 +20,7 @@ module Text.Pandoc.Readers.HTML.Parsing
   , pInTagWithAttribs
   , pAny
   , pCloses
+  , closes
   , pSatisfy
   , pBlank
   , matchTagClose

@@ -40,6 +40,7 @@ module Text.Pandoc.Readers
   , readOrg
   , readLaTeX
   , readHtml
+  , readMinML
   , readJATS
   , readJira
   , readTextile
@@ -103,6 +104,7 @@ import Text.Pandoc.Readers.JATS (readJATS)
 import Text.Pandoc.Readers.Jira (readJira)
 import Text.Pandoc.Readers.LaTeX
 import Text.Pandoc.Readers.MediaWiki
+import Text.Pandoc.Readers.MinML
 import Text.Pandoc.Readers.Muse
 import Text.Pandoc.Readers.Native
 import Text.Pandoc.Readers.ODT
@@ -156,6 +158,7 @@ readers = [("native"       , TextReader readNative)
           ,("org"          , TextReader readOrg)
           ,("textile"      , TextReader readTextile) -- TODO : textile+lhs
           ,("html"         , TextReader readHtml)
+          ,("minml"        , TextReader readMinML)
           ,("bits"         , TextReader readJATS)
           ,("jats"         , TextReader readJATS)
           ,("jira"         , TextReader readJira)
