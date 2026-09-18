@@ -81,6 +81,7 @@ It can convert *from*
   [Markdown](https://daringfireball.net/projects/markdown/))
 - `mediawiki` ([MediaWiki
   markup](https://www.mediawiki.org/wiki/Help:Formatting))
+- `minml` ([MinML](https://bford.info/2022/12/28/minml/))
 - `man` ([roff man](https://man.cx/groff_man(7)))
 - `mdoc` ([mdoc](https://mandoc.bsd.lv/man/mdoc.7.html) manual page
   markup)
@@ -201,6 +202,7 @@ It can convert *to*
 - `markua` ([Markua](https://leanpub.com/markua/read))
 - `mediawiki` ([MediaWiki
   markup](https://www.mediawiki.org/wiki/Help:Formatting))
+- `minml` ([MinML](https://bford.info/2022/12/28/minml/))
 - `ms` ([roff ms](https://man.cx/groff_ms(7)))
 - `muse` ([Muse](https://amusewiki.org/library/manual))
 - `native` (native Haskell)

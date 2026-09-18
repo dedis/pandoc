@@ -109,6 +109,7 @@ getDefaultTemplate format = do
        "docx"    -> getDefaultTemplate "openxml"
        "odt"     -> getDefaultTemplate "opendocument"
        "html"    -> getDefaultTemplate "html5"
+       "minml"   -> getDefaultTemplate "html5"
        "docbook" -> getDefaultTemplate "docbook5"
        "epub"    -> getDefaultTemplate "epub3"
        "jats"    -> getDefaultTemplate "jats_archiving"

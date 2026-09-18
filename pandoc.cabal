@@ -217,6 +217,7 @@ extra-source-files:
                  test/bodybg.gif
                  test/*.native
                  test/command/*.md
+                 test/command/*.minml
                  test/command/*.csl
                  test/command/*.svg
                  test/command/7691.docx
@@ -610,6 +611,7 @@ library
                    Text.Pandoc.Readers,
                    Text.Pandoc.Readers.AsciiDoc,
                    Text.Pandoc.Readers.HTML,
+                   Text.Pandoc.Readers.MinML,
                    Text.Pandoc.Readers.LaTeX,
                    Text.Pandoc.Readers.Markdown,
                    Text.Pandoc.Readers.CommonMark,
@@ -655,6 +657,7 @@ library
                    Text.Pandoc.Writers.JATS,
                    Text.Pandoc.Writers.OPML,
                    Text.Pandoc.Writers.HTML,
+                   Text.Pandoc.Writers.MinML,
                    Text.Pandoc.Writers.ChunkedHTML,
                    Text.Pandoc.Writers.Ipynb,
                    Text.Pandoc.Writers.ICML,
@@ -730,6 +733,7 @@ library
                    Text.Pandoc.Class.Sandbox,
                    Text.Pandoc.Filter.Environment,
                    Text.Pandoc.Filter.JSON,
+                   Text.Pandoc.MinML,
                    Text.Pandoc.Parsing.Capabilities,
                    Text.Pandoc.Parsing.Citations,
                    Text.Pandoc.Parsing.General,
@@ -868,6 +872,7 @@ test-suite test-pandoc
                   Tests.ImageSize
                   Tests.Readers.LaTeX
                   Tests.Readers.HTML
+                  Tests.Readers.MinML
                   Tests.Readers.JATS
                   Tests.Readers.Jira
                   Tests.Readers.Markdown
@@ -904,6 +909,7 @@ test-suite test-pandoc
                   Tests.Writers.ConTeXt
                   Tests.Writers.DocBook
                   Tests.Writers.HTML
+                  Tests.Writers.MinML
                   Tests.Writers.JATS
                   Tests.Writers.Jira
                   Tests.Writers.Markdown

@@ -267,6 +267,7 @@ header when requesting a document from a URL:
     - `markdown_phpextra` ([PHP Markdown Extra])
     - `markdown_strict` (original unextended [Markdown])
     - `mediawiki` ([MediaWiki markup])
+    - `minml` ([MinML])
     - `man` ([roff man])
     - `mdoc` ([mdoc] manual page markup)
     - `muse` ([Muse])
@@ -295,6 +296,14 @@ header when requesting a document from a URL:
     See [Extensions] below, for a list of extensions and
     their names.  See `--list-input-formats` and `--list-extensions`,
     below.
+
+    The `minml` reader accepts MinML elements, attributes, character
+    references, quotation forms, comments, raw matchertext, whitespace
+    controls, declarations, and processing instructions. It interprets
+    tags as HTML, or as Pandoc XML when the root element is `Pandoc`.
+    Files with the `.m` or `.minml` extension select this reader automatically.
+    Both the reader and writer support the HTML format's extensions.
+    Matcher nesting is limited to 256 levels.
 
 `-t` *FORMAT*, `-w` *FORMAT*, `--to=`*FORMAT*, `--write=`*FORMAT*
 
@@ -350,6 +359,7 @@ header when requesting a document from a URL:
     - `markdown_strict` (original unextended [Markdown])
     - `markua` ([Markua])
     - `mediawiki` ([MediaWiki markup])
+    - `minml` ([MinML])
     - `ms` ([roff ms])
     - `muse` ([Muse])
     - `native` (native Haskell)
@@ -386,6 +396,16 @@ header when requesting a document from a URL:
     disabled by appending `+EXTENSION` or `-EXTENSION` to the format
     name.  See [Extensions] below, for a list of extensions and their
     names.  See `--list-output-formats` and `--list-extensions`, below.
+
+    The `minml` writer emits HTML vocabulary in MinML syntax. Standalone
+    output uses the HTML5 template; custom templates and included headers
+    or bodies must use HTML syntax. The complete HTML output is then
+    converted to MinML. For example:
+
+        pandoc -f minml -t html document.minml
+        pandoc -f html -t minml document.html
+        pandoc -f minml -t xml document.minml
+        pandoc -f xml -t minml document.xml
 
 `-o` *FILE*, `--output=`*FILE*
 
@@ -536,6 +556,7 @@ header when requesting a document from a URL:
 [Slidy]: https://www.w3.org/Talks/Tools/Slidy2/
 [Slideous]: https://goessner.net/articles/slideous/
 [HTML]: https://www.w3.org/html/
+[MinML]: https://bford.info/2022/12/28/minml/
 [HTML5]: https://html.spec.whatwg.org/
 [polyglot markup]: https://www.w3.org/TR/html-polyglot/
 [XHTML]: https://www.w3.org/TR/xhtml1/

@@ -443,6 +443,7 @@ getDefaultExtensions "html"            = extensionsFromList
                                            Ext_native_spans]
 getDefaultExtensions "html4"           = getDefaultExtensions "html"
 getDefaultExtensions "html5"           = getDefaultExtensions "html"
+getDefaultExtensions "minml"           = getDefaultExtensions "html"
 getDefaultExtensions "epub"            = extensionsFromList
                                           [Ext_raw_html,
                                            Ext_native_divs,
@@ -609,6 +610,7 @@ getAllExtensions f = universalExtensions <> getAll f
     ]
   getAll "html4"           = getAll "html"
   getAll "html5"           = getAll "html"
+  getAll "minml"           = getAll "html"
   getAll "epub"            = getAll "html"
   getAll "epub2"           = getAll "epub"
   getAll "epub3"           = getAll "epub"
