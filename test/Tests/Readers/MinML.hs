@@ -76,6 +76,9 @@ tests =
         "<span title='(x y)' data-value='{a b}'>text</span>"
     , equivalent "Unicode attribute names"
         "span{é=[value] x́=1}[text]" "<span é='value' x́='1'>text</span>"
+    , equivalent "liberal attribute names"
+        "span{@click=x :class=y 1x=z a=b=c}[text]"
+        "<span @click=x :class=y 1x=z a='b=c'>text</span>"
     ]
   , testGroup "references and literal matchers"
     [ equivalent "named and numeric references"
@@ -124,6 +127,8 @@ tests =
     , equivalent "raw controls stay literal" "pre[+[> a <]]" "<pre>&gt; a &lt;</pre>"
     , equivalent "comment" "p[a -[ > ({[]}) < ] b]"
         "<p>a <!-- > ({[]}) < --> b</p>"
+    , equivalent "comment with references" "p[a -[x [amp] [#93] > y < [#40]] b]"
+        "<p>a <!--x & ] > y < (--> b</p>"
     , equivalent "XML-style comment with unmatched matchers"
         "p[a ![-- unmatched ) ] [ ( --] b]"
         "<p>a <!-- unmatched ) ] [ ( --> b</p>"
@@ -145,7 +150,7 @@ tests =
   , testGroup "invalid syntax" $ map invalid
     [ "a(b", "b)c", "a[b", "a]b", "a{b", "a}b", "a(]b", "a{)b"
     , "p{}", "p{}[", "p{a}[]", "p{a=x b}[]", "p{a=[x]y}[]"
-    , "p{ a= <[]}[]", "p{ a=[]> }[]", "p{1x=y}[]", "p{x =y}[]"
+    , "p{ a= <[]}[]", "p{ a=[]> }[]", "p{x =y}[]"
     , "p{} []", "+[)]", "-[)]", "+[?[)]]", "![DOCTYPE html"
     , "[#0]", "[#xD800]", "[#1114112]", "[#xg]", "[#x]"
     ]

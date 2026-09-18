@@ -7,8 +7,8 @@ module Text.Pandoc.MinML
   , renderXML
   , escapeMinML
   , checkNesting
-  , matchertext
-  , validName
+  , validAttributeName
+  , validElementName
   ) where
 
 import Control.Monad (unless, void, when)
@@ -51,19 +51,6 @@ nestingMessage = "MinML nesting exceeds " <> T.pack (show maxNesting) <> " level
 
 checkNesting :: Int -> Either PandocError ()
 checkNesting depth = when (depth > maxNesting) $ Left $ PandocParseError nestingMessage
-
--- | True if matchers nest properly and stay within the nesting limit when
--- the text is placed at the given depth.
-matchertext :: Int -> Text -> Bool
-matchertext depth = maybe False (null . snd) . T.foldl' step (Just (depth, []))
- where
-  step (Just (size, stack)) c
-    | c `elem` ("([{" :: String) =
-        if size >= maxNesting then Nothing else Just (size + 1, closing c : stack)
-    | c `elem` (")]}" :: String) = case stack of
-        expected : rest | c == expected -> Just (size - 1, rest)
-        _ -> Nothing
-  step acc _ = acc
 
 parseMinML :: ToSources a => a -> Either PandocError [Node]
 parseMinML input = do
@@ -190,12 +177,11 @@ element :: SourcePos -> Text -> Char -> [Token] -> [Token]
 element pos name open body rest
   | name `elem` ["+", "-", "!", "?"] = do
       unless (open == '[') $ syntaxError pos "expected '['"
-      let text = tokenText body
-          node = case name of
-            "+" -> Literal text
-            "-" -> Comment text
-            "!" -> Declaration text
-            _ -> Instruction text
+      node <- case name of
+        "+" -> return $ Literal (tokenText body)
+        "-" -> Comment . T.concat . map literalText <$> interpret False False False body
+        "!" -> return $ Declaration (tokenText body)
+        _ -> return $ Instruction (tokenText body)
       return ([node], rest)
   | otherwise = do
       (attrs, contents, remaining) <- if open == '{'
@@ -217,7 +203,7 @@ attributes pos tokens = case tokens of
   Chunk p text : rest | T.null (T.dropWhile isSpaceChar text) -> attributes pos rest
                      | otherwise -> do
       let (name, value) = T.break (== '=') (T.dropWhile isSpaceChar text)
-      unless (validName name && not (T.null value)) $
+      unless (validAttributeName name && not (T.null value)) $
         syntaxError p "expected attribute name followed by '='"
       let input = [Chunk p (T.drop 1 value) | T.length value > 1] ++ rest
       (nodes, remaining) <- case input of
@@ -231,7 +217,7 @@ attributes pos tokens = case tokens of
           nodes <- interpret False False False body
           return (nodes, following)
       more <- attributes pos remaining
-      return $ (name, T.concat [t | Literal t <- nodes]) : more
+      return $ (name, T.concat (map literalText nodes)) : more
   _ -> syntaxError pos "expected attribute name"
  where
   separated [] = True
@@ -246,22 +232,18 @@ attributes pos tokens = case tokens of
           else (prefix, Chunk p suffix : rest)
   unquoted (t : ts) = first (t :) (unquoted ts)
 
--- XML 1.0 names are used for attributes; MinML element names are more liberal.
-validName :: Text -> Bool
-validName t = case T.uncons t of
-  Nothing -> False
-  Just (c, rest) -> start c && T.all continuation rest
- where
-  start c = c == ':' || c == '_' || c >= 'A' && c <= 'Z'
-         || c >= 'a' && c <= 'z' || any (within c)
-            [('\xc0','\xd6'), ('\xd8','\xf6'), ('\xf8','\x2ff'),
-             ('\x370','\x37d'), ('\x37f','\x1fff'), ('\x200c','\x200d'),
-             ('\x2070','\x218f'), ('\x2c00','\x2fef'), ('\x3001','\xd7ff'),
-             ('\xf900','\xfdcf'), ('\xfdf0','\xfffd'), ('\x10000','\xeffff')]
-  continuation c = start c || c `elem` ("-.\xb7" :: String)
-                  || c >= '0' && c <= '9'
-                  || within c ('\x300','\x36f') || within c ('\x203f','\x2040')
-  within c (lo, hi) = c >= lo && c <= hi
+-- Names are liberal so that every HTML element and attribute name is
+-- representable. The reference implementation requires XML attribute names.
+validElementName :: Text -> Bool
+validElementName t = not (T.null t) && T.all isNameChar t
+                     && t `notElem` ["+", "-", "!", "?", "\"", "'"]
+
+validAttributeName :: Text -> Bool
+validAttributeName t = not (T.null t) && T.all (\c -> isNameChar c && c /= '=') t
+
+literalText :: Node -> Text
+literalText (Literal t) = t
+literalText _ = ""
 
 reference :: Char -> [Token] -> Maybe Text
 reference '[' [Chunk _ t]

@@ -14,8 +14,8 @@ import Text.HTML.TagSoup
 import Text.Pandoc.Class (PandocMonad)
 import Text.Pandoc.Definition (Pandoc, Block (..), Inline (..), Format (..))
 import Text.Pandoc.Error (PandocError (..))
-import Text.Pandoc.MinML (checkNesting, escapeMinML, matchertext, parseMinML,
-                          toHtmlTags, validName)
+import Text.Pandoc.MinML (checkNesting, escapeMinML, parseMinML, toHtmlTags,
+                          validAttributeName, validElementName)
 import Text.Pandoc.Options (WriterOptions (..))
 import Text.Pandoc.Readers.HTML.Parsing (closes)
 import Text.Pandoc.Readers.HTML.TagCategories (voidTags)
@@ -63,6 +63,8 @@ render ascii stack previousName tags = case tags of
         ((padding <> B.fromText text) <>) <$> render ascii stack False rest
     | otherwise -> do
         checkNesting (depth + 1)
+        unless (validElementName name) $ Left $ PandocAppError $
+          "MinML cannot represent the element name " <> name
         attrs' <- attributes attrs
         let opening = padding <> B.fromText name <> attrs' <> "["
         if T.toLower name `Set.member` voidTags
@@ -74,15 +76,8 @@ render ascii stack previousName tags = case tags of
       (foldMap (const "]") (name : inner) <>) <$> render ascii outer False rest
   TagComment text : rest -> do
     checkNesting (depth + 1)
-    -- Unmatched matchers need XML comment syntax, which ends at "--]".
-    comment <- if matchertext (depth + 1) text
-      then return $ "-[" <> B.fromText text <> "]"
-      else if "--]" `T.isInfixOf` text
-        then Left $ PandocAppError $
-          "MinML cannot represent a comment with unmatched matchers and \"--]\": "
-          <> text
-        else return $ "![--" <> B.fromText text <> "--]"
-    ((padding <> comment) <>) <$> render ascii stack False rest
+    (_, escaped) <- escapeMinML ascii (depth + 1) False text
+    ((padding <> "-[" <> escaped <> "]") <>) <$> render ascii stack False rest
   TagWarning _ : rest -> render ascii stack previousName rest
   TagPosition _ _ : rest -> render ascii stack previousName rest
  where
@@ -94,7 +89,7 @@ render ascii stack previousName tags = case tags of
     rendered <- mapM attribute attrs
     return $ "{" <> mconcat (intersperse " " rendered) <> "}"
   attribute (name, value) = do
-    unless (validName name) $ Left $ PandocAppError $
+    unless (validAttributeName name) $ Left $ PandocAppError $
       "MinML cannot represent the attribute name " <> name
     (_, escaped) <- escapeMinML ascii (depth + 2) False value
     return $ B.fromText name <> "=[" <> escaped <> "]"

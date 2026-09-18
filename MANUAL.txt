@@ -299,7 +299,10 @@ header when requesting a document from a URL:
 
     The `minml` reader accepts MinML elements, attributes, character
     references, quotation forms, comments, raw matchertext, whitespace
-    controls, declarations, and processing instructions. It interprets
+    controls, declarations, and processing instructions. Comment content
+    may contain character references, so unmatched matchers can be
+    escaped. Attribute names may contain any characters except
+    whitespace, matchers, and `=`. The reader interprets
     tags as HTML, or as Pandoc XML when the root element is `Pandoc`.
     Files with the `.m` or `.minml` extension select this reader automatically.
     Both the reader and writer support the HTML format's extensions.
