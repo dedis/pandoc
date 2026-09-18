@@ -7,6 +7,8 @@ module Text.Pandoc.MinML
   , renderXML
   , escapeMinML
   , checkNesting
+  , matchertext
+  , validName
   ) where
 
 import Control.Monad (unless, void, when)
@@ -42,11 +44,26 @@ data Token = Chunk SourcePos Text | Pair SourcePos Char [Token]
 type Parser = ParsecT Sources () Identity
 
 maxNesting :: Int
-maxNesting = 1024 -- Should be plenty
+maxNesting = 256
+
+nestingMessage :: Text
+nestingMessage = "MinML nesting exceeds " <> T.pack (show maxNesting) <> " levels"
 
 checkNesting :: Int -> Either PandocError ()
-checkNesting depth = when (depth > maxNesting) $
-  Left $ PandocParseError "MinML nesting exceeds 1024 levels"
+checkNesting depth = when (depth > maxNesting) $ Left $ PandocParseError nestingMessage
+
+-- | True if matchers nest properly and stay within the nesting limit when
+-- the text is placed at the given depth.
+matchertext :: Int -> Text -> Bool
+matchertext depth = maybe False (null . snd) . T.foldl' step (Just (depth, []))
+ where
+  step (Just (size, stack)) c
+    | c `elem` ("([{" :: String) =
+        if size >= maxNesting then Nothing else Just (size + 1, closing c : stack)
+    | c `elem` (")]}" :: String) = case stack of
+        expected : rest | c == expected -> Just (size - 1, rest)
+        _ -> Nothing
+  step acc _ = acc
 
 parseMinML :: ToSources a => a -> Either PandocError [Node]
 parseMinML input = do
@@ -77,7 +94,7 @@ tokenize directives depth end = do
       Just c -> fail $ "expected " <> [c]
     Just c | Just c == end -> return prefix
     Just c | c `elem` ("([{" :: String) -> do
-      when (depth >= maxNesting) $ fail "MinML nesting exceeds 1024 levels"
+      when (depth >= maxNesting) $ fail (T.unpack nestingMessage)
       start <- getPosition
       void anyChar
       let name = snd (starter text)
@@ -111,7 +128,7 @@ directive depth = do
         body <- manyTillChar anyChar (char q)
         return $ T.singleton q <> body <> T.singleton q
       <|> do
-        when (depth >= maxNesting) $ fail "MinML nesting exceeds 1024 levels"
+        when (depth >= maxNesting) $ fail (T.unpack nestingMessage)
         void $ char '['
         body <- directive (depth + 1)
         void $ char ']'
@@ -342,14 +359,15 @@ renderXML = TL.toStrict . B.toLazyText . foldMap go
   go (Instruction t) = "<?" <> B.fromText t <> "?>"
   attr (name, value) = " " <> B.fromText name <> "=\"" <> esc value <> "\""
 
--- Escape matchers and whitespace-control characters. Keep track of the last
--- output character so a reference cannot attach to preceding text as a tag.
-escapeMinML :: Int -> Bool -> Text -> Either PandocError (Bool, B.Builder)
-escapeMinML depth initial text = do
+-- Escape matchers and whitespace-control characters, and non-ASCII characters
+-- when requested. Keep track of the last output character so a reference
+-- cannot attach to preceding text as a tag.
+escapeMinML :: Bool -> Int -> Bool -> Text -> Either PandocError (Bool, B.Builder)
+escapeMinML ascii depth initial text = do
   when (depth >= maxNesting && T.any needsEscape text) $ checkNesting (depth + 1)
   return $ T.foldl' step (initial, mempty) text
  where
-  needsEscape c = c `elem` ("()[]{}<>" :: String)
+  needsEscape c = c `elem` ("()[]{}<>" :: String) || ascii && c > '\x7f'
   step (previousName, out) c
     | needsEscape c =
         (False, out <> (if previousName then " <" else mempty) <>

@@ -61,6 +61,33 @@ tests =
   , check "raw script and stylesheet" $ B.rawBlock "html"
       "<script>if (a < b) { alert('x[y]'); }</script><style>p { color: red; }</style>"
   , check "raw comments" $ B.para $ B.rawInline "html" "<!-- unmatched ) ] [ ( -->"
+  , testCase "balanced comments use MinML syntax" $
+      purely (writeMinML options)
+        (B.doc $ B.para $ "a" <> B.rawInline "html" "<!-- x [--] (y) -->" <> "b")
+        @?= "p[a <-[ x [--] (y) ]b]"
+  , check "balanced comment containing --]" $ B.para $
+      "a" <> B.rawInline "html" "<!-- x [--] (y) -->" <> "b"
+  , testCase "unmatched comments use XML syntax" $
+      purely (writeMinML options)
+        (B.doc $ B.para $ "a" <> B.rawInline "html" "<!-- ) -->" <> "b")
+        @?= "p[a <![-- ) --]b]"
+  , testCase "unrepresentable comment" $
+      case runPure $ writeMinML options
+             (B.doc $ B.para $ B.rawInline "html" "<!-- ) --] -->") of
+        Left PandocAppError{} -> return ()
+        Left err -> assertFailure $ show err
+        Right result -> assertFailure $ "Expected failure, got " <> T.unpack result
+  , testCase "invalid attribute name" $
+      case runPure $ writeMinML options
+             (B.doc $ B.rawBlock "html" "<div @click='x'>t</div>") of
+        Left PandocAppError{} -> return ()
+        Left err -> assertFailure $ show err
+        Right result -> assertFailure $ "Expected failure, got " <> T.unpack result
+  , testCase "ascii output" $
+      purely (writeMinML options{ writerPreferAscii = True })
+        (B.doc $ B.para $ B.text "café λ" <> B.emph "😀")
+        @?= "p[caf <[#233] [#955]em[[#128512]]]"
+  , check "ascii output reads back" $ B.para $ B.text "café λ 😀 [x]"
   , testCase "raw MinML block" $
       purely (writeMinML options) (B.doc $ B.rawBlock "minml" "p[hello]")
         @?= "p[hello]"

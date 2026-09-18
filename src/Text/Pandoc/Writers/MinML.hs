@@ -2,6 +2,7 @@
 -- | Write MinML using the HTML writer's document mapping and templates.
 module Text.Pandoc.Writers.MinML (writeMinML) where
 
+import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Data.List (intersperse)
 import qualified Data.Set as Set
@@ -12,9 +13,10 @@ import qualified Data.Text.Lazy.Builder as B
 import Text.HTML.TagSoup
 import Text.Pandoc.Class (PandocMonad)
 import Text.Pandoc.Definition (Pandoc, Block (..), Inline (..), Format (..))
-import Text.Pandoc.Error (PandocError)
-import Text.Pandoc.MinML (checkNesting, escapeMinML, parseMinML, toHtmlTags)
-import Text.Pandoc.Options (WriterOptions)
+import Text.Pandoc.Error (PandocError (..))
+import Text.Pandoc.MinML (checkNesting, escapeMinML, matchertext, parseMinML,
+                          toHtmlTags, validName)
+import Text.Pandoc.Options (WriterOptions (..))
 import Text.Pandoc.Readers.HTML.Parsing (closes)
 import Text.Pandoc.Readers.HTML.TagCategories (voidTags)
 import Text.Pandoc.Shared (renderTags')
@@ -26,7 +28,7 @@ writeMinML opts doc = do
   doc' <- walkM rawBlock doc >>= walkM rawInline
   html <- writeHtml5String opts doc'
   either throwError (return . TL.toStrict . B.toLazyText) $
-    render [] False $ parseTags html
+    render (writerPreferAscii opts) [] False $ parseTags html
 
 rawBlock :: PandocMonad m => Block -> m Block
 rawBlock (RawBlock (Format "minml") text) = RawBlock (Format "html") <$> rawHtml text
@@ -40,17 +42,17 @@ rawHtml :: PandocMonad m => Text -> m Text
 rawHtml = either throwError (return . renderTags' . toHtmlTags) . parseMinML
 
 -- Close still-open elements at EOF, including raw HTML with omitted end tags.
-render :: [Text] -> Bool -> [Tag Text] -> Either PandocError B.Builder
-render stack previousName tags = case tags of
+render :: Bool -> [Text] -> Bool -> [Tag Text] -> Either PandocError B.Builder
+render ascii stack previousName tags = case tags of
   [] -> return $ foldMap (const "]") stack
   TagText text : rest -> do
-    (lastName, escaped) <- escapeMinML depth previousName text
-    (escaped <>) <$> render stack lastName rest
+    (lastName, escaped) <- escapeMinML ascii depth previousName text
+    (escaped <>) <$> render ascii stack lastName rest
   TagOpen name attrs : rest
     | top : outer <- stack, top `elem` optionalEndTags
     , T.toLower name `closes` top
     , not (any (`elem` ["svg", "math"]) stack) ->
-        ("]" <>) <$> render outer False tags
+        ("]" <>) <$> render ascii outer False tags
     | "!" `T.isPrefixOf` name || "?" `T.isPrefixOf` name -> do
         checkNesting (depth + 1)
         let raw = renderTags [TagOpen name attrs]
@@ -58,24 +60,31 @@ render stack previousName tags = case tags of
             (prefix, content) = T.splitAt 1 body
             payload = if prefix == "?" then T.dropEnd 1 content else content
             text = prefix <> "[" <> payload <> "]"
-        ((padding <> B.fromText text) <>) <$> render stack False rest
+        ((padding <> B.fromText text) <>) <$> render ascii stack False rest
     | otherwise -> do
         checkNesting (depth + 1)
         attrs' <- attributes attrs
         let opening = padding <> B.fromText name <> attrs' <> "["
         if T.toLower name `Set.member` voidTags
-           then ((opening <> "]") <>) <$> render stack False rest
-           else (opening <>) <$> render (T.toLower name : stack) False rest
+           then ((opening <> "]") <>) <$> render ascii stack False rest
+           else (opening <>) <$> render ascii (T.toLower name : stack) False rest
   TagClose name : rest -> case break (== T.toLower name) stack of
-    (_, []) -> render stack previousName rest
+    (_, []) -> render ascii stack previousName rest
     (inner, _ : outer) ->
-      (foldMap (const "]") (name : inner) <>) <$> render outer False rest
+      (foldMap (const "]") (name : inner) <>) <$> render ascii outer False rest
   TagComment text : rest -> do
     checkNesting (depth + 1)
-    ((padding <> "![--" <> B.fromText text <> "--]") <>) <$>
-      render stack False rest
-  TagWarning _ : rest -> render stack previousName rest
-  TagPosition _ _ : rest -> render stack previousName rest
+    -- Unmatched matchers need XML comment syntax, which ends at "--]".
+    comment <- if matchertext (depth + 1) text
+      then return $ "-[" <> B.fromText text <> "]"
+      else if "--]" `T.isInfixOf` text
+        then Left $ PandocAppError $
+          "MinML cannot represent a comment with unmatched matchers and \"--]\": "
+          <> text
+        else return $ "![--" <> B.fromText text <> "--]"
+    ((padding <> comment) <>) <$> render ascii stack False rest
+  TagWarning _ : rest -> render ascii stack previousName rest
+  TagPosition _ _ : rest -> render ascii stack previousName rest
  where
   depth = length stack
   padding = if previousName then " <" else mempty
@@ -85,7 +94,9 @@ render stack previousName tags = case tags of
     rendered <- mapM attribute attrs
     return $ "{" <> mconcat (intersperse " " rendered) <> "}"
   attribute (name, value) = do
-    (_, escaped) <- escapeMinML (depth + 2) False value
+    unless (validName name) $ Left $ PandocAppError $
+      "MinML cannot represent the attribute name " <> name
+    (_, escaped) <- escapeMinML ascii (depth + 2) False value
     return $ B.fromText name <> "=[" <> escaped <> "]"
 
 -- Only infer omitted end tags where HTML permits them. In particular, do
